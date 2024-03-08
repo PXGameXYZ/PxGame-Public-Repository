@@ -5,13 +5,11 @@ To get started, follow these steps:
 
 1. Go to the directory of the cloned repository, either PixelPlanet's or ours.
 
-```bash
-cd C:/Users/d0064/pixelplanet
+cd pixelplanet
 ```
 
 2. Install the required dependencies using npm.
 
-```bash
 npm install
 ```
 
@@ -19,7 +17,6 @@ npm install
 
    a. Run the game without making any changes.
 
-   ```bash
    npm run build
    (edit the ecosystem.yml)
    pm2 start ecosystem.yml
