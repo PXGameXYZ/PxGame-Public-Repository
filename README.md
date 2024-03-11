@@ -1,4 +1,3 @@
-```markdown
 ## Getting Started
 
 To get started, follow these steps:
@@ -6,12 +5,12 @@ To get started, follow these steps:
 1. Go to the directory of the cloned repository, either PixelPlanet's or ours.
 
 cd pixelplanet
-```
+
 
 2. Install the required dependencies using npm.
 
 npm install
-```
+
 
 3. After the installation, you have two options:
 
@@ -20,7 +19,7 @@ npm install
    npm run build
    (edit the ecosystem.yml)
    pm2 start ecosystem.yml
-   ```
+   
 
    b. Prepare the game for deployment to make it accessible to everyone else. Note: Ensure you have a domain set up; Cloudflare is the recommended option.
 
