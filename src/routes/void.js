@@ -10,8 +10,17 @@ export default (req, res) => {
   });
 
   if (rpgEvent.eventTimestamp) {
-    const time = new Date(rpgEvent.eventTimestamp);
-    res.send(`Next void at ${time.toUTCString()}`);
+    const currentTime = new Date();
+    const eventTime = new Date(rpgEvent.eventTimestamp);
+    const timeDifference = Math.max(0, eventTime - currentTime);
+
+    const hours = Math.floor(timeDifference / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
+
+    const timeUntilEvent = `${hours} hours, ${minutes} minutes, ${seconds} seconds`;
+
+    res.send(`Time until next void: ${timeUntilEvent}`);
   } else {
     res.send('No void');
   }
