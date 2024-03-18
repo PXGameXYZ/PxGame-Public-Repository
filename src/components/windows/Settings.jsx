@@ -2,15 +2,17 @@
  *
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch, shallowEqual } from 'react-redux';
 import { c, t } from 'ttag';
 
 import SettingsItem from '../SettingsItem';
 import LanguageSelect from '../LanguageSelect';
+import TemplateSettings from '../TemplateSettings';
 import {
   toggleGrid,
   togglePixelNotify,
+  toggleMvmCtrls,
   toggleMute,
   toggleAutoZoomIn,
   toggleCompactPalette,
@@ -48,14 +50,72 @@ const SettingsItemSelect = ({
       </select>
     </div>
     <div className="modaldesc">{children}</div>
-    <div className="modaldivider" />
   </div>
 );
 
-function Settings() {
+const Checkpoints = ({ savedCheckpoints, onSaveCheckpoint }) => {
+  const [newCheckpoint, setNewCheckpoint] = useState('');
+  const [newName, setNewName] = useState('');
+  const [displayCoordinateOnly, setDisplayCoordinateOnly] = useState(false);
+
+  const handleSave = () => {
+    onSaveCheckpoint(newCheckpoint, newName);
+    setNewCheckpoint('');
+    setNewName('');
+  };
+
+  const handleCheckpointClick = (checkpoint) => {
+    window.location.href = checkpoint.coordinates;
+  };
+
+  return (
+    <div className="setitem">
+      <div className="modaldivider" style={{ height: '1px', backgroundColor: '#e0e0e0' }} />
+      <div className="setrow">
+        <h3 className="settitle">Checkpoints</h3>
+        <div>
+          <input
+            type="text"
+            placeholder="Coordinates..."
+            value={newCheckpoint}
+            onChange={(e) => setNewCheckpoint(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Name..."
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+          />
+          <label>
+            <input
+              type="checkbox"
+              checked={displayCoordinateOnly}
+              onChange={() => setDisplayCoordinateOnly(!displayCoordinateOnly)}
+            />
+            Display Coordinate Only
+          </label>
+          <button onClick={handleSave}>Save</button>
+        </div>
+      </div>
+      <div className="modaldesc">
+        <ul>
+          {savedCheckpoints.map((checkpoint, index) => (
+            <li key={index} onClick={() => handleCheckpointClick(checkpoint)}>
+              {displayCoordinateOnly ? checkpoint.coordinates : `${checkpoint.name} - ${checkpoint.coordinates}`}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="modaldivider" style={{ height: '1px', backgroundColor: '#e0e0e0' }} />
+    </div>
+  );
+};
+
+const Settings = () => {
   const [
     isGridShown,
     isPixelNotifyShown,
+    isMvmCtrlsShown,
     autoZoomIn,
     compactPalette,
     isPotato,
@@ -64,9 +124,11 @@ function Settings() {
     isMuted,
     chatNotify,
     isHistoricalView,
+    templatesAvailable,
   ] = useSelector((state) => [
     state.gui.showGrid,
     state.gui.showPixelNotify,
+    state.gui.showMvmCtrls,
     state.gui.autoZoomIn,
     state.gui.compactPalette,
     state.gui.isPotato,
@@ -75,10 +137,29 @@ function Settings() {
     state.gui.mute,
     state.gui.chatNotify,
     state.canvas.isHistoricalView,
+    state.templates.available,
   ], shallowEqual);
   const dispatch = useDispatch();
-
   const audioAvailable = window.AudioContext || window.webkitAudioContext;
+  const [savedCheckpoints, setSavedCheckpoints] = useState([]);
+
+  // Load saved checkpoints from localStorage
+  useEffect(() => {
+    const storedCheckpoints = localStorage.getItem('savedCheckpoints');
+    if (storedCheckpoints) {
+      setSavedCheckpoints(JSON.parse(storedCheckpoints));
+    }
+  }, []);
+
+  // Save checkpoints to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('savedCheckpoints', JSON.stringify(savedCheckpoints));
+  }, [savedCheckpoints]);
+
+  const onSaveCheckpoint = (checkpoint, name) => {
+    const formattedCheckpoint = checkpoint.startsWith('#d') ? checkpoint : `#d,${checkpoint.replace('_', ',')}`;
+    setSavedCheckpoints([...savedCheckpoints, { coordinates: formattedCheckpoint, name }]);
+  };  
 
   return (
     <div className="content">
@@ -99,6 +180,14 @@ function Settings() {
         {t`Show circles where pixels are placed.`}
       </SettingsItem>
       <SettingsItem
+        title={t`Always show Movement Controls`}
+        keyBind={c('keybinds').t`N`}
+        value={isMvmCtrlsShown}
+        onToggle={() => dispatch(toggleMvmCtrls())}
+      >
+        {t`Always show movement control buttons`}
+      </SettingsItem>
+      <SettingsItem
         title={t`Disable Game Sounds`}
         keyBind={c('keybinds').t`M`}
         deactivated={(!audioAvailable)}
@@ -108,7 +197,6 @@ function Settings() {
         {[t`All sound effects will be disabled.`,
           (!audioAvailable) && (
             <p className="warn">
-              {/* eslint-disable-next-line max-len */}
               {t`Your Browser doesn't allow us to use AudioContext to play sounds. Do you have some privacy feature blocking us?`}
             </p>
           ),
@@ -126,12 +214,10 @@ function Settings() {
         value={autoZoomIn}
         onToggle={() => dispatch(toggleAutoZoomIn())}
       >
-        {/* eslint-disable-next-line max-len */}
         {t`Zoom in instead of placing a pixel when you tap the canvas and your zoom is small.`}
       </SettingsItem>
       <SettingsItem
         title={t`Compact Palette`}
-        // eslint-disable-next-line max-len
         value={compactPalette}
         onToggle={() => dispatch(toggleCompactPalette())}
       >
@@ -152,14 +238,14 @@ function Settings() {
         {t`Show Grid in white instead of black.`}
       </SettingsItem>
       {(window.ssv && window.ssv.backupurl) && (
-      <SettingsItem
-        title={t`Historical View`}
-        value={isHistoricalView}
-        keyBind={c('keybinds').t`H`}
-        onToggle={() => dispatch(toggleHistoricalView())}
-      >
-        {t`Check out past versions of the canvas.`}
-      </SettingsItem>
+        <SettingsItem
+          title={t`Historical View`}
+          value={isHistoricalView}
+          keyBind={c('keybinds').t`H`}
+          onToggle={() => dispatch(toggleHistoricalView())}
+        >
+          {t`Check out past versions of the canvas.`}
+        </SettingsItem>
       )}
       {(window.ssv && window.ssv.availableStyles) && (
         <SettingsItemSelect
@@ -181,8 +267,10 @@ function Settings() {
           </div>
         </div>
       )}
+      <Checkpoints savedCheckpoints={savedCheckpoints} onSaveCheckpoint={onSaveCheckpoint} />
+      {(templatesAvailable) && <TemplateSettings />}
     </div>
   );
-}
+};
 
 export default React.memo(Settings);
