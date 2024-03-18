@@ -53,7 +53,7 @@ const SettingsItemSelect = ({
   </div>
 );
 
-const Checkpoints = ({ savedCheckpoints, onSaveCheckpoint }) => {
+const Checkpoints = ({ savedCheckpoints, onSaveCheckpoint, onDeleteCheckpoint }) => {
   const [newCheckpoint, setNewCheckpoint] = useState('');
   const [newName, setNewName] = useState('');
   const [displayCoordinateOnly, setDisplayCoordinateOnly] = useState(false);
@@ -62,6 +62,10 @@ const Checkpoints = ({ savedCheckpoints, onSaveCheckpoint }) => {
     onSaveCheckpoint(newCheckpoint, newName);
     setNewCheckpoint('');
     setNewName('');
+  };
+
+  const handleDelete = (index) => {
+    onDeleteCheckpoint(index);
   };
 
   const handleCheckpointClick = (checkpoint) => {
@@ -86,14 +90,6 @@ const Checkpoints = ({ savedCheckpoints, onSaveCheckpoint }) => {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
           />
-          <label>
-            <input
-              type="checkbox"
-              checked={displayCoordinateOnly}
-              onChange={() => setDisplayCoordinateOnly(!displayCoordinateOnly)}
-            />
-            Display Coordinate Only
-          </label>
           <button onClick={handleSave}>Save</button>
         </div>
       </div>
@@ -101,7 +97,8 @@ const Checkpoints = ({ savedCheckpoints, onSaveCheckpoint }) => {
         <ul>
           {savedCheckpoints.map((checkpoint, index) => (
             <li key={index} onClick={() => handleCheckpointClick(checkpoint)}>
-              {displayCoordinateOnly ? checkpoint.coordinates : `${checkpoint.name} - ${checkpoint.coordinates}`}
+              <span>{displayCoordinateOnly ? checkpoint.coordinates : `${checkpoint.name} - ${checkpoint.coordinates}`}</span>
+              <button onClick={(e) => { e.stopPropagation(); handleDelete(index); }}> X</button>
             </li>
           ))}
         </ul>
@@ -160,6 +157,12 @@ const Settings = () => {
     const formattedCheckpoint = checkpoint.startsWith('#d') ? checkpoint : `#d,${checkpoint.replace('_', ',')}`;
     setSavedCheckpoints([...savedCheckpoints, { coordinates: formattedCheckpoint, name }]);
   };  
+
+  const onDeleteCheckpoint = (index) => {
+    const updatedCheckpoints = [...savedCheckpoints];
+    updatedCheckpoints.splice(index, 1);
+    setSavedCheckpoints(updatedCheckpoints);
+  };
 
   return (
     <div className="content">
@@ -267,7 +270,7 @@ const Settings = () => {
           </div>
         </div>
       )}
-      <Checkpoints savedCheckpoints={savedCheckpoints} onSaveCheckpoint={onSaveCheckpoint} />
+      <Checkpoints savedCheckpoints={savedCheckpoints} onSaveCheckpoint={onSaveCheckpoint} onDeleteCheckpoint={onDeleteCheckpoint} />
       {(templatesAvailable) && <TemplateSettings />}
     </div>
   );
