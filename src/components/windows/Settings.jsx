@@ -8,11 +8,9 @@ import { c, t } from 'ttag';
 
 import SettingsItem from '../SettingsItem';
 import LanguageSelect from '../LanguageSelect';
-import TemplateSettings from '../TemplateSettings';
 import {
   toggleGrid,
   togglePixelNotify,
-  toggleMvmCtrls,
   toggleMute,
   toggleAutoZoomIn,
   toggleCompactPalette,
@@ -37,16 +35,11 @@ const SettingsItemSelect = ({
           onSelect(sel.options[sel.selectedIndex].value);
         }}
       >
-        {
-          values.map((value) => (
-            <option
-              key={value}
-              value={value}
-            >
-              {value}
-            </option>
-          ))
-        }
+        {values.map((value) => (
+          <option key={value} value={value}>
+            {value}
+          </option>
+        ))}
       </select>
     </div>
     <div className="modaldesc">{children}</div>
@@ -56,7 +49,6 @@ const SettingsItemSelect = ({
 const Checkpoints = ({ savedCheckpoints, onSaveCheckpoint, onDeleteCheckpoint }) => {
   const [newCheckpoint, setNewCheckpoint] = useState('');
   const [newName, setNewName] = useState('');
-  const [displayCoordinateOnly, setDisplayCoordinateOnly] = useState(false);
 
   const handleSave = () => {
     onSaveCheckpoint(newCheckpoint, newName);
@@ -64,55 +56,40 @@ const Checkpoints = ({ savedCheckpoints, onSaveCheckpoint, onDeleteCheckpoint })
     setNewName('');
   };
 
-  const handleDelete = (index) => {
-    onDeleteCheckpoint(index);
-  };
-
-  const handleCheckpointClick = (checkpoint) => {
-    window.location.href = checkpoint.coordinates;
-  };
-
   return (
     <div className="setitem">
-      <div className="modaldivider" style={{ height: '1px', backgroundColor: '#e0e0e0' }} />
       <div className="setrow">
         <h3 className="settitle">Checkpoints</h3>
-        <div>
-          <input
-            type="text"
-            placeholder="Coordinates..."
-            value={newCheckpoint}
-            onChange={(e) => setNewCheckpoint(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Name..."
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-          />
-          <button onClick={handleSave}>Save</button>
-        </div>
+        <input
+          type="text"
+          placeholder="Coordinates..."
+          value={newCheckpoint}
+          onChange={(e) => setNewCheckpoint(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Name..."
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+        />
+        <button onClick={handleSave}>Save</button>
       </div>
-      <div className="modaldesc">
-        <ul>
-          {savedCheckpoints.map((checkpoint, index) => (
-            <li key={index} onClick={() => handleCheckpointClick(checkpoint)}>
-              <span>{displayCoordinateOnly ? checkpoint.coordinates : `${checkpoint.name} - ${checkpoint.coordinates}`}</span>
-              <button onClick={(e) => { e.stopPropagation(); handleDelete(index); }}> X</button>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className="modaldivider" style={{ height: '1px', backgroundColor: '#e0e0e0' }} />
+      <ul>
+        {savedCheckpoints.map((checkpoint, index) => (
+          <li key={index}>
+            {checkpoint.name} - {checkpoint.coordinates}
+            <button onClick={() => onDeleteCheckpoint(index)}>Delete</button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
 
-const Settings = () => {
+function Settings() {
   const [
     isGridShown,
     isPixelNotifyShown,
-    isMvmCtrlsShown,
     autoZoomIn,
     compactPalette,
     isPotato,
@@ -121,11 +98,9 @@ const Settings = () => {
     isMuted,
     chatNotify,
     isHistoricalView,
-    templatesAvailable,
   ] = useSelector((state) => [
     state.gui.showGrid,
     state.gui.showPixelNotify,
-    state.gui.showMvmCtrls,
     state.gui.autoZoomIn,
     state.gui.compactPalette,
     state.gui.isPotato,
@@ -134,13 +109,12 @@ const Settings = () => {
     state.gui.mute,
     state.gui.chatNotify,
     state.canvas.isHistoricalView,
-    state.templates.available,
   ], shallowEqual);
   const dispatch = useDispatch();
+
   const audioAvailable = window.AudioContext || window.webkitAudioContext;
   const [savedCheckpoints, setSavedCheckpoints] = useState([]);
 
-  // Load saved checkpoints from localStorage
   useEffect(() => {
     const storedCheckpoints = localStorage.getItem('savedCheckpoints');
     if (storedCheckpoints) {
@@ -148,19 +122,16 @@ const Settings = () => {
     }
   }, []);
 
-  // Save checkpoints to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('savedCheckpoints', JSON.stringify(savedCheckpoints));
   }, [savedCheckpoints]);
 
-  const onSaveCheckpoint = (checkpoint, name) => {
-    const formattedCheckpoint = checkpoint.startsWith('#d') ? checkpoint : `#d,${checkpoint.replace('_', ',')}`;
-    setSavedCheckpoints([...savedCheckpoints, { coordinates: formattedCheckpoint, name }]);
-  };  
+  const onSaveCheckpoint = (coordinates, name) => {
+    setSavedCheckpoints([...savedCheckpoints, { coordinates, name }]);
+  };
 
   const onDeleteCheckpoint = (index) => {
-    const updatedCheckpoints = [...savedCheckpoints];
-    updatedCheckpoints.splice(index, 1);
+    const updatedCheckpoints = savedCheckpoints.filter((_, i) => i !== index);
     setSavedCheckpoints(updatedCheckpoints);
   };
 
@@ -183,27 +154,18 @@ const Settings = () => {
         {t`Show circles where pixels are placed.`}
       </SettingsItem>
       <SettingsItem
-        title={t`Always show Movement Controls`}
-        keyBind={c('keybinds').t`N`}
-        value={isMvmCtrlsShown}
-        onToggle={() => dispatch(toggleMvmCtrls())}
-      >
-        {t`Always show movement control buttons`}
-      </SettingsItem>
-      <SettingsItem
         title={t`Disable Game Sounds`}
         keyBind={c('keybinds').t`M`}
-        deactivated={(!audioAvailable)}
+        deactivated={!audioAvailable}
         value={!audioAvailable || isMuted}
         onToggle={() => dispatch(toggleMute())}
       >
-        {[t`All sound effects will be disabled.`,
-          (!audioAvailable) && (
-            <p className="warn">
-              {t`Your Browser doesn't allow us to use AudioContext to play sounds. Do you have some privacy feature blocking us?`}
-            </p>
-          ),
-        ]}
+        {t`All sound effects will be disabled.`}
+        {!audioAvailable && (
+          <p className="warn">
+            {t`Your browser doesn't allow us to use AudioContext to play sounds. Do you have some privacy feature blocking us?`}
+          </p>
+        )}
       </SettingsItem>
       <SettingsItem
         title={t`Enable chat notifications`}
@@ -230,7 +192,7 @@ const Settings = () => {
         title={t`Potato Mode`}
         value={isPotato}
         onToggle={() => dispatch(togglePotatoMode())}
-      >
+        >
         {t`For when you are playing on a potato.`}
       </SettingsItem>
       <SettingsItem
@@ -257,7 +219,7 @@ const Settings = () => {
           selected={selectedStyle}
           onSelect={(style) => dispatch(selectStyle(style))}
         >
-          {t`How pixelplanet should look like.`}
+          {t`How the interface should look like.`}
         </SettingsItemSelect>
       )}
       {(window.ssv && navigator.cookieEnabled && window.ssv.langs) && (
@@ -270,10 +232,14 @@ const Settings = () => {
           </div>
         </div>
       )}
-      <Checkpoints savedCheckpoints={savedCheckpoints} onSaveCheckpoint={onSaveCheckpoint} onDeleteCheckpoint={onDeleteCheckpoint} />
-      {(templatesAvailable) && <TemplateSettings />}
+      <Checkpoints
+        savedCheckpoints={savedCheckpoints}
+        onSaveCheckpoint={onSaveCheckpoint}
+        onDeleteCheckpoint={onDeleteCheckpoint}
+      />
     </div>
   );
-};
+}
 
 export default React.memo(Settings);
+
